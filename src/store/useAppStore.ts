@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CreatorProfile, PostIdea } from '../services/geminiService';
+import { ProfileAnalysis, PostIdea } from '../services/geminiService';
 
 interface AppStore {
-  profile: CreatorProfile | null;
+  profile: ProfileAnalysis | null;
   profileUrl: string;
   ideas: PostIdea[];
   drafts: Record<string, string>; // Maps idea.id to modified content
@@ -14,7 +14,7 @@ interface AppStore {
   analytics: any;
   accounts: { linkedin: boolean; x: boolean };
   setProfileUrl: (url: string) => void;
-  setProfile: (profile: CreatorProfile | null) => void;
+  setProfile: (profile: ProfileAnalysis | null) => void;
   setIdeas: (ideas: PostIdea[]) => void;
   updateDraft: (id: string, content: string) => void;
   addHistory: (post: any) => void;

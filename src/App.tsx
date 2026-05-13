@@ -52,10 +52,7 @@ function App() {
                 id: Date.now().toString(),
                 title: 'Custom Draft',
                 platform: 'LinkedIn',
-                engagement: 'TBD',
-                hook: '',
-                content: '',
-                category: 'Custom'
+                hook: ''
               });
               setAppState('EDITOR');
             }} 

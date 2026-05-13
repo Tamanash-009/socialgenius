@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Sparkles, ArrowRight, Linkedin, Twitter, Globe, WifiOff } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { analyzeProfile } from '../services/geminiService';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import toast from 'react-hot-toast';
 
 export default function Ingestion({ onNext }: { onNext: () => void }) {
   const isOnline = useOnlineStatus();
@@ -35,13 +36,15 @@ export default function Ingestion({ onNext }: { onNext: () => void }) {
 
     try {
       const data = await analyzeProfile(profileUrl);
-      setProfile(data.profile);
+      setProfile(data.profileAnalysis);
       setIdeas(data.ideas);
       clearInterval(interval);
+      toast.success('Profile analyzed successfully!');
       onNext();
-    } catch (err) {
+    } catch (err: any) {
       clearInterval(interval);
       setIsAnalyzing(false);
+      toast.error(err.message || 'Failed to analyze profile.');
     }
   };
 

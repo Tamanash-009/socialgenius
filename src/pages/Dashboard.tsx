@@ -1,13 +1,34 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { History, Plus } from 'lucide-react';
+import { History, Plus, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { PostIdea } from '../services/geminiService';
+import { PostIdea, analyzeProfile } from '../services/geminiService';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { WifiOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function Dashboard({ onSelectIdea, onNewDraft }: { onSelectIdea: (idea: PostIdea) => void, onNewDraft: () => void }) {
-  const { profile, ideas } = useAppStore();
+  const { profile, ideas, profileUrl, setProfile, setIdeas } = useAppStore();
   const isOnline = useOnlineStatus();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!profileUrl) {
+      toast.error("No profile URL found to sync.");
+      return;
+    }
+    setIsRefreshing(true);
+    try {
+      const data = await analyzeProfile(profileUrl);
+      setProfile(data.profileAnalysis);
+      setIdeas(data.ideas);
+      toast.success('Ideas refreshed successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to refresh ideas.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   if (!profile) return null;
 
@@ -28,28 +49,22 @@ export default function Dashboard({ onSelectIdea, onNewDraft }: { onSelectIdea: 
           <div className="space-y-4">
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-xs text-white/50">Hook Strength</p>
-                <p className="text-2xl font-bold">{profile.hookStrength}%</p>
-              </div>
-              <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${profile.hookStrength}%` }}
-                  className="h-full accent-gradient"
-                />
+                <p className="text-xs text-white/50">Primary Tone</p>
+                <p className="text-sm font-bold mt-1 capitalize">{profile.tone}</p>
               </div>
             </div>
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-xs text-white/50">Engagement Rank</p>
-                <p className="text-2xl font-bold">{profile.engagementRate > 4 ? 'Elite' : 'Rising'}</p>
+                <p className="text-xs text-white/50">Target Audience</p>
+                <p className="text-sm font-bold mt-1 capitalize">{profile.audienceType}</p>
               </div>
-              <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(profile.engagementRate / 10) * 100}%` }}
-                  className="h-full teal-gradient"
-                />
+            </div>
+            <div className="flex flex-col gap-1 mt-2">
+              <p className="text-xs text-white/50">Top Niches</p>
+              <div className="flex flex-wrap gap-2">
+                {profile.niche?.map((n, i) => (
+                  <span key={i} className="px-2 py-1 bg-white/5 rounded text-[10px] text-white/80 border border-white/10">{n}</span>
+                ))}
               </div>
             </div>
           </div>
@@ -64,7 +79,7 @@ export default function Dashboard({ onSelectIdea, onNewDraft }: { onSelectIdea: 
              {ideas.slice(0, 3).map(i => (
                <div key={i.id} className="p-3 rounded-lg bg-white/5 border border-white/10 text-[10px] flex justify-between items-center">
                  <span className="truncate max-w-[120px]">{i.title}</span>
-                 <span className="text-accent">{i.engagement}</span>
+                 <span className="text-accent">{i.platform}</span>
                </div>
              ))}
            </div>
@@ -77,12 +92,13 @@ export default function Dashboard({ onSelectIdea, onNewDraft }: { onSelectIdea: 
             Daily Drop Ideas
           </h4>
           <button 
-            onClick={onNewDraft} 
-            disabled={!isOnline}
+            onClick={handleRefresh} 
+            disabled={!isOnline || isRefreshing}
             className="text-xs font-bold text-accent px-3 py-1 bg-accent/10 rounded-lg hover:bg-accent/20 disabled:opacity-30 flex items-center gap-2"
           >
             {!isOnline && <WifiOff className="w-3 h-3" />}
-            {isOnline ? 'RE-SYNC' : 'CACHED'}
+            {isRefreshing ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+            {isOnline ? (isRefreshing ? 'SYNCING...' : 'RE-SYNC') : 'CACHED'}
           </button>
         </div>
 
@@ -98,10 +114,9 @@ export default function Dashboard({ onSelectIdea, onNewDraft }: { onSelectIdea: 
               className={`p-6 rounded-2xl border transition-all cursor-pointer group ${idx === 1 ? 'bg-indigo-500/10 border-accent/30' : 'glass-card hover:bg-white/10'}`}
             >
               <div className="flex items-center justify-between mb-3">
-                <span className={`text-[10px] font-bold ${idea.platform === 'LinkedIn' ? 'text-blue-400' : idea.platform === 'X' ? 'text-white' : 'text-orange-400'}`}>
+                <span className={`text-[10px] font-bold ${idea.platform.toLowerCase() === 'linkedin' ? 'text-blue-400' : idea.platform.toLowerCase() === 'x' ? 'text-white' : 'text-orange-400'}`}>
                   {idea.platform.toUpperCase()}
                 </span>
-                <span className="text-[10px] text-white/30">{idea.engagement} Potency</span>
               </div>
               <p className={`text-sm font-medium leading-snug group-hover:text-accent transition-colors ${idx === 1 ? 'text-white' : 'text-white/80'}`}>
                 {idea.hook.length > 80 ? idea.hook.substring(0, 80) + '...' : idea.hook}
