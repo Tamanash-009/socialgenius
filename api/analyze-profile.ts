@@ -87,6 +87,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const data = await response.json();
+    if (data.error) {
+      throw new Error(`OpenRouter API Error: ${data.error.message || 'Unknown error'}`);
+    }
     const rawText = data.choices?.[0]?.message?.content || "{}";
 
     const cleanedText = rawText.replace(/```(?:json)?\n?/gi, '').replace(/\n?```/g, '').trim();
@@ -94,8 +97,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const validated = ProfileAnalysisSchema.parse(json);
     
     res.status(200).json(validated);
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Vercel API] analyze-profile error:", error);
-    res.status(500).json({ error: "Failed to analyze profile" });
+    res.status(500).json({ error: error.message || "Failed to analyze profile" });
   }
 }
