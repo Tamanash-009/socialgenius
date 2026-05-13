@@ -84,7 +84,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        "model": "google/gemini-1.5-pro",
+        "model": "google/gemini-2.5-flash",
+        "max_tokens": 1500,
         "response_format": { "type": "json_object" },
         "messages": [
           {"role": "user", "content": prompt}
