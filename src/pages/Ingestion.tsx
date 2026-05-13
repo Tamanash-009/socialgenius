@@ -187,7 +187,7 @@ export default function Ingestion({ onNext }: { onNext: () => void }) {
 
       <div className="mb-8 inline-flex items-center gap-2 px-4 py-2 glass-card rounded-full text-accent font-medium text-sm">
         <Sparkles className="w-4 h-4" />
-        Now Powered by Gemini 3 Flash
+        Now Powered by Advanced AI
       </div>
       
       <h2 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold mb-8 leading-[1.1] tracking-tight max-w-4xl">
