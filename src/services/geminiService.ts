@@ -33,7 +33,12 @@ export async function analyzeProfile(url: string): Promise<{ profileAnalysis: Pr
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to analyze profile: ${response.statusText}`);
+    let errorMsg = response.statusText;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) errorMsg = errorData.error;
+    } catch(e) {}
+    throw new Error(errorMsg);
   }
 
   return response.json();
@@ -50,7 +55,12 @@ export async function generatePost(
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to generate post: ${response.statusText}`);
+    let errorMsg = response.statusText;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) errorMsg = errorData.error;
+    } catch(e) {}
+    throw new Error(errorMsg);
   }
 
   const data = await response.json();
