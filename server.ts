@@ -3,7 +3,7 @@ import path from "path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import session from "express-session";
-import { createServer as createViteServer } from "vite";
+
 import fs from "fs";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -42,8 +42,9 @@ const GeneratedPostSchema = z.object({
   })
 });
 
-async function startServer() {
-  const app = express();
+const app = express();
+
+async function configureServer() {
   const PORT = 3000;
 
   app.use(helmet({ contentSecurityPolicy: false }));
@@ -94,9 +95,6 @@ async function startServer() {
           "niche": ["string"],
           "writingStyle": "string",
           "audienceType": "string"
-        },
-        "ideas": [
-          { "id": "string", "title": "string", "hook": "string", "platform": "LinkedIn or Twitter" }
         ]
       }`;
 
@@ -106,7 +104,9 @@ async function startServer() {
         config: { responseMimeType: "application/json" }
       });
 
-      const json = JSON.parse(response.text || "{}");
+      const rawText = response.text || "{}";
+      const cleanedText = rawText.replace(/```(?:json)?\n?/gi, '').replace(/\n?```/g, '').trim();
+      const json = JSON.parse(cleanedText);
       const validated = ProfileAnalysisSchema.parse(json);
       res.json(validated);
     } catch (error) {
@@ -152,7 +152,9 @@ async function startServer() {
         config: { responseMimeType: "application/json" }
       });
 
-      const json = JSON.parse(response.text || "{}");
+      const rawText = response.text || "{}";
+      const cleanedText = rawText.replace(/```(?:json)?\n?/gi, '').replace(/\n?```/g, '').trim();
+      const json = JSON.parse(cleanedText);
       const validated = GeneratedPostSchema.parse(json);
       res.json(validated);
     } catch (error) {
@@ -213,17 +215,26 @@ async function startServer() {
   });
 
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
   } else {
+    // Only serve static files if running standalone
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
+    }
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  // Only listen if not running in a serverless environment like Vercel
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
-startServer();
+configureServer();
+
+export default app;
