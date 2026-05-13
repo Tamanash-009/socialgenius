@@ -5,14 +5,30 @@ import cookieParser from "cookie-parser";
 import session from "express-session";
 import { createServer as createViteServer } from "vite";
 import fs from "fs";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Security Headers
+  app.use(helmet({
+    contentSecurityPolicy: false,
+  }));
+
+  // Rate Limiting
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
   app.use(cors());
   app.use(express.json());
   app.use(cookieParser());
+  app.use("/api/", apiLimiter);
   
   // session configuration for iframe/cross-origin
   app.use(session({
