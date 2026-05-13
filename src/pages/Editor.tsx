@@ -9,7 +9,7 @@ export default function Editor({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     if (selectedIdea) {
-      setContent(drafts[selectedIdea.id] || selectedIdea.hook + '\n\n' + selectedIdea.framework.map(f => `- ${f}`).join('\n'));
+      setContent(drafts[selectedIdea.id] || selectedIdea.hook + '\n\n' + (selectedIdea.content || ''));
     } else {
       setContent('');
     }
@@ -50,7 +50,7 @@ export default function Editor({ onBack }: { onBack: () => void }) {
         <div className="flex justify-between items-start">
           <div className="space-y-1">
             <h3 className="text-xl font-bold">{selectedIdea.title}</h3>
-            <p className="text-sm text-white/40">Optimize this draft using your learned tone: <span className="text-teal-400 font-mono">{profile.toneKeywords[0]}</span></p>
+            <p className="text-sm text-white/40">Optimize this draft using your learned tone: <span className="text-teal-400 font-mono">{profile.tone}</span></p>
           </div>
           <button className="p-2 rounded-xl bg-indigo-500/10 text-accent hover:bg-indigo-500/20 transition-colors">
             <Sparkles className="w-5 h-5" />

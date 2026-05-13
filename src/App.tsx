@@ -47,7 +47,18 @@ function App() {
               setSelectedIdea(idea);
               setAppState('EDITOR');
             }} 
-            onNewDraft={() => setAppState('EDITOR')} 
+            onNewDraft={() => {
+              setSelectedIdea({
+                id: Date.now().toString(),
+                title: 'Custom Draft',
+                platform: 'LinkedIn',
+                engagement: 'TBD',
+                hook: '',
+                content: '',
+                category: 'Custom'
+              });
+              setAppState('EDITOR');
+            }} 
           />
         );
       case 'EDITOR':
