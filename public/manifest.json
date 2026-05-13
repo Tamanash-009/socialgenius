@@ -1,0 +1,21 @@
+{
+  "name": "SocialGenius AI",
+  "short_name": "SocialGenius",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0118",
+  "theme_color": "#6366f1",
+  "description": "Your AI Digital Twin for Content Creation",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/bottts/svg?seed=socialgenius&backgroundColor=6366f1",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/bottts/svg?seed=socialgenius&backgroundColor=6366f1",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
