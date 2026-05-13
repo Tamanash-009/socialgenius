@@ -90,6 +90,20 @@ export default function Accounts() {
           </button>
         </div>
       </div>
+
+      <div className="pt-8 mt-8 border-t border-white/10">
+        <h3 className="font-bold text-red-400 mb-2">Danger Zone</h3>
+        <p className="text-sm text-white/40 mb-4">Disconnecting your profile will clear all cached ideas, drafts, and analysis data. You will be prompted to analyze a new profile URL.</p>
+        <button 
+          onClick={() => {
+            useAppStore.getState().clearAll();
+            window.location.reload();
+          }}
+          className="px-6 py-2.5 rounded-full text-sm font-bold border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+        >
+          Disconnect Profile
+        </button>
+      </div>
     </motion.div>
   );
 }
