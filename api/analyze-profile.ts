@@ -23,7 +23,26 @@ const ProfileAnalysisSchema = z.object({
   }))
 });
 
+const rateLimitMap = new Map<string, { count: number, resetTime: number }>();
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const ip = (req.headers['x-forwarded-for'] as string) || 'unknown';
+  const now = Date.now();
+  const rateRecord = rateLimitMap.get(ip);
+  
+  if (rateRecord && now > rateRecord.resetTime) {
+    rateLimitMap.delete(ip);
+  }
+  
+  const currentRecord = rateLimitMap.get(ip) || { count: 0, resetTime: now + 24 * 60 * 60 * 1000 };
+  
+  if (currentRecord.count >= 3) {
+    return res.status(429).json({ error: "Rate limit exceeded: You can only make 3 requests per day." });
+  }
+  
+  currentRecord.count += 1;
+  rateLimitMap.set(ip, currentRecord);
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: "Method not allowed" });
   }
