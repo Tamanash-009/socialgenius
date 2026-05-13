@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary } from 'react-error-boundary';
+import { Toaster } from 'react-hot-toast';
 import App from './App.tsx';
 import './index.css';
 
@@ -24,6 +25,16 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <HelmetProvider>
         <App />
+        <Toaster 
+          position="bottom-center"
+          toastOptions={{
+            style: {
+              background: '#1F1235',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)',
+            },
+          }}
+        />
       </HelmetProvider>
     </ErrorBoundary>
   </StrictMode>,

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Sparkles, Send } from 'lucide-react';
+import { ArrowLeft, Sparkles, Send, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { generatePost } from '../services/geminiService';
+import { toast } from 'react-hot-toast';
 
 export default function Editor({ onBack }: { onBack: () => void }) {
   const { selectedIdea, drafts, updateDraft, profile, addHistory } = useAppStore();
   const [content, setContent] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (selectedIdea) {
@@ -20,6 +23,35 @@ export default function Editor({ onBack }: { onBack: () => void }) {
       updateDraft(selectedIdea.id, content);
       addHistory({ ...selectedIdea, content, timestamp: Date.now() });
       onBack();
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!selectedIdea || !profile) return;
+    
+    setIsGenerating(true);
+    const toastId = toast.loading('Generating your masterpiece...', {
+      style: {
+        background: '#1F1235',
+        color: '#fff',
+        border: '1px solid rgba(255,255,255,0.1)',
+      }
+    });
+    
+    try {
+      // Use existing content as context, or fallback to the hook
+      const contextText = content.trim().length > 0 ? content : selectedIdea.hook;
+      const generated = await generatePost(contextText, profile.tone, selectedIdea.platform);
+      
+      const newContent = `${generated.post}\n\n---\n\n📝 Caption: ${generated.caption}\n\n#️⃣ Hashtags: ${generated.hashtags.join(' ')}\n\n💡 Platform Suggestions:\n• Instagram: ${generated.platformSuggestions.instagram}\n• LinkedIn: ${generated.platformSuggestions.linkedin}\n• X: ${generated.platformSuggestions.twitter}`;
+      
+      setContent(newContent);
+      toast.success('Post generated successfully!', { id: toastId });
+    } catch (error) {
+      console.error("[Editor] Generation error:", error);
+      toast.error(error instanceof Error ? error.message : 'Failed to generate post. Check logs.', { id: toastId });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -52,8 +84,13 @@ export default function Editor({ onBack }: { onBack: () => void }) {
             <h3 className="text-xl font-bold">{selectedIdea.title}</h3>
             <p className="text-sm text-white/40">Optimize this draft using your learned tone: <span className="text-teal-400 font-mono">{profile.tone}</span></p>
           </div>
-          <button className="p-2 rounded-xl bg-indigo-500/10 text-accent hover:bg-indigo-500/20 transition-colors">
-            <Sparkles className="w-5 h-5" />
+          <button 
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            className="p-2 rounded-xl bg-indigo-500/10 text-accent hover:bg-indigo-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            title="Generate Post with AI"
+          >
+            {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
           </button>
         </div>
 

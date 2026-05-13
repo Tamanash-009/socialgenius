@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { z } from "zod";
 
 const API_KEY = process.env.GEMINI_API_KEY || "";
 const ai = new GoogleGenAI({ apiKey: API_KEY });
@@ -21,8 +22,107 @@ export interface CreatorProfile {
   tone: string;
 }
 
+// --- NEW ZOD SCHEMA & GENERATION PIPELINE --- //
+
+export const PostGenerationSchema = z.object({
+  post: z.string(),
+  caption: z.string(),
+  hashtags: z.array(z.string()),
+  platformSuggestions: z.object({
+    instagram: z.string(),
+    linkedin: z.string(),
+    twitter: z.string()
+  })
+});
+
+export type GeneratedPostResponse = z.infer<typeof PostGenerationSchema>;
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function fetchWithTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
+  );
+  return Promise.race([promise, timeout]);
+}
+
+export async function generatePost(
+  context: string,
+  tone: string,
+  platform: string
+): Promise<GeneratedPostResponse> {
+  const prompt = `
+You are an expert social media copywriter.
+Write a highly engaging social media post based on the following draft/context:
+"${context}"
+
+Tone instructions: ${tone}
+Target Primary Platform: ${platform}
+
+Format your response exactly as JSON matching this schema:
+{
+  "post": "The main post content, formatted with line breaks, hooks, and strong structure.",
+  "caption": "A shorter, punchy caption summarizing the post.",
+  "hashtags": ["#tag1", "#tag2", "#tag3"],
+  "platformSuggestions": {
+    "instagram": "How to adapt this for Instagram (visual ideas, caption style).",
+    "linkedin": "How to adapt this for LinkedIn (professional angle, carousel ideas).",
+    "twitter": "How to adapt this for Twitter/X (thread breakdown, hook style)."
+  }
+}
+  `;
+
+  let attempt = 0;
+  const maxRetries = 3;
+  // Fallback AI provider strategy using different Gemini models
+  const models = ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+
+  while (attempt < maxRetries) {
+    const model = models[attempt % models.length];
+    try {
+      console.log(`[AI Generation] Attempt ${attempt + 1}/${maxRetries} using model: ${model}`);
+      
+      const generationPromise = ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          temperature: 0.7,
+        }
+      });
+
+      // 15-second timeout per attempt to handle hanging API calls
+      const response = await fetchWithTimeout(generationPromise, 15000);
+      
+      const rawText = response.text;
+      if (!rawText) throw new Error("Empty response text from model.");
+      
+      const json = JSON.parse(rawText);
+      
+      // Strict Schema Validation using Zod
+      const validatedData = PostGenerationSchema.parse(json);
+      
+      console.log(`[AI Generation] Success on attempt ${attempt + 1}!`);
+      return validatedData;
+
+    } catch (error) {
+      console.error(`[AI Generation] Attempt ${attempt + 1} failed:`, error);
+      attempt++;
+      if (attempt >= maxRetries) {
+        console.error("[AI Generation] All retries exhausted. Throwing error.");
+        throw new Error("Failed to generate post after multiple attempts. Please check your API quota or check Vercel Logs for environment variables.");
+      }
+      // Exponential backoff
+      await wait(Math.pow(2, attempt) * 1000);
+    }
+  }
+
+  throw new Error("Unexpected error in generation loop");
+}
+
+// --- EXISTING METHODS (Modified to use gemini-1.5-flash) --- //
+
 export async function analyzeProfile(url: string): Promise<{ profile: CreatorProfile; ideas: PostIdea[] }> {
-  // Simulate delay for analysis
   await new Promise(resolve => setTimeout(resolve, 3000));
 
   const prompt = `Analyze this profile URL: ${url}. 
@@ -39,43 +139,10 @@ export async function analyzeProfile(url: string): Promise<{ profile: CreatorPro
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash", // Updated to stable model
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            profile: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                handle: { type: Type.STRING },
-                hookStrength: { type: Type.NUMBER },
-                engagementRate: { type: Type.NUMBER },
-                tone: { type: Type.STRING }
-              },
-              required: ["name", "handle", "hookStrength", "engagementRate", "tone"]
-            },
-            ideas: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  title: { type: Type.STRING },
-                  platform: { type: Type.STRING },
-                  engagement: { type: Type.STRING },
-                  hook: { type: Type.STRING },
-                  content: { type: Type.STRING },
-                  category: { type: Type.STRING }
-                },
-                required: ["id", "title", "platform", "engagement", "hook", "content", "category"]
-              }
-            }
-          },
-          required: ["profile", "ideas"]
-        }
       }
     });
 
@@ -113,14 +180,10 @@ export async function generateAlternativeHooks(idea: PostIdea): Promise<string[]
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash", // Updated to stable model
       contents: prompt,
       config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
+        responseMimeType: "application/json"
       }
     });
 
